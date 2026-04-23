@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <title>OpenWrt 自定义编译</title>
+  <style>
+    *{box-sizing:border-box;font-family:system-ui}
+    body{max-width:900px;margin:2rem auto;padding:0 1rem}
+    .form-item{margin:12px 0}
+    label{display:block;margin-bottom:4px}
+    input,select,textarea{width:100%;padding:8px;border:1px solid #ddd;border-radius:6px}
+    .btn{background:#007bff;color:white;border:none;padding:12px;border-radius:6px;cursor:pointer}
+    .result{background:#f8f9fa;padding:12px;border-radius:6px;margin-top:1rem;white-space:pre-wrap}
+  </style>
+</head>
+<body>
+<h1>OpenWrt 自定义编译配置</h1>
+
+<div class="form-item">
+  <label>机型</label>
+  <select id="arch">
+    <option value="x86_64">x86_64 通用</option>
+    <option value="arm64">ARM64 (N1/R2S/R4S)</option>
+    <option value="ramips">小米/红米路由</option>
+  </select>
+</div>
+
+<div class="form-item">
+  <label>LAN IP</label>
+  <input id="lanip" value="192.168.2.1" type="text">
+</div>
+<div class="form-item">
+  <label>子网掩码</label>
+  <input id="netmask" value="255.255.255.0" type="text">
+</div>
+<div class="form-item">
+  <label>网关</label>
+  <input id="gateway" value="192.168.2.1" type="text">
+</div>
+<div class="form-item">
+  <label>管理密码</label>
+  <input id="passwd" value="password" type="text">
+</div>
+
+<div class="form-item">
+  <label>额外软件包（空格分隔）</label>
+  <textarea id="packages" rows="3">luci-app-openclash luci-app-adguardhome luci-app-dockerman luci-app-ddns luci-app-upnp</textarea>
+</div>
+
+<button class="btn" onclick="gen()">生成编译配置</button>
+<div class="result" id="out"></div>
+
+<script>
+function gen(){
+  const arch = document.getElementById('arch').value
+  const lanip = document.getElementById('lanip').value
+  const mask = document.getElementById('netmask').value
+  const gw = document.getElementById('gateway').value
+  const pass = document.getElementById('passwd').value
+  const pkgs = document.getElementById('packages').value
+
+  const diy2 = `
+# 修改IP
+sed -i 's/192.168.1.1/${lanip}/g' package/base-files/files/bin/config_generate
+
+# 子网掩码 & 网关
+uci set network.lan.netmask='${mask}'
+uci set network.lan.gateway='${gw}'
+uci commit network
+
+# 设置密码
+echo -e 'root:${pass}' | chpasswd 2>/dev/null
+
+# 添加软件包
+sed -i '/DEFAULT_PACKAGES/ s/$/ ${pkgs}/' include/target.mk
+`
+  document.getElementById('out').textContent = diy2
+}
+</script>
+</body>
+</html>
